@@ -6,6 +6,7 @@ import { AdminManagementWorkspace } from "@/components/admin/management-workspac
 import { RankingBadge } from "@/components/admin/ranking-badge";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { Button } from "@/components/ui/button";
+import { getRuntimeMode } from "@/lib/env";
 import { getAdminDataset } from "@/lib/queries/admin-dataset";
 import { formatCurrency } from "@/lib/utils";
 
@@ -20,7 +21,7 @@ export default async function AdminDashboardPage() {
         eyebrow="Operations dashboard"
         title="Management desk and executive visibility"
         description="Search clients and operators, manage lifecycle state, and keep the wider operational, finance, onboarding, and ranking signals in view."
-        meta="Admin scaffold with interactive lifecycle management"
+        meta="Live clients, operators and lifecycle controls"
         actions={
           <>
             <Link href="/admin/clients">
@@ -33,7 +34,11 @@ export default async function AdminDashboardPage() {
         }
       />
 
-      <AdminManagementWorkspace initialClients={clientDetails} initialOperators={operatorDetails} />
+      <AdminManagementWorkspace
+        initialClients={clientDetails}
+        initialOperators={operatorDetails}
+        live={getRuntimeMode() === "live"}
+      />
 
       <KpiGrid
         items={[

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import {
   ArrowRight,
@@ -24,6 +25,7 @@ import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { adminRequest } from "@/lib/admin/request";
 import { generateId, formatCurrency, formatDate, formatDateTime } from "@/lib/utils";
 import type { AssignmentSummary, ClientDetail, OperatorDetail } from "@/types/admin";
 
@@ -255,13 +257,22 @@ function getSelectedRecord(records: ManagementRecord[], selectedKey: string | nu
 
 export function AdminManagementWorkspace({
   initialClients,
-  initialOperators
+  initialOperators,
+  live = false
 }: {
   initialClients: ClientDetail[];
   initialOperators: OperatorDetail[];
+  // Live mode saves every change to the database; demo mode keeps changes in this browser session.
+  live?: boolean;
 }) {
+  const router = useRouter();
   const [clients, setClients] = useState(initialClients);
   const [operators, setOperators] = useState(initialOperators);
+  const [saving, setSaving] = useState(false);
+
+  // Pick up fresh server data after router.refresh().
+  useEffect(() => setClients(initialClients), [initialClients]);
+  useEffect(() => setOperators(initialOperators), [initialOperators]);
   const [scope, setScope] = useState<EntityScope>("both");
   const [search, setSearch] = useState("");
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
@@ -339,10 +350,65 @@ export function AdminManagementWorkspace({
     setDraftMode(null);
   }
 
-  function handleClientSubmit(event: FormEvent<HTMLFormElement>) {
+  async function saveLive(url: string, body: unknown, successMessage: string) {
+    setSaving(true);
+    try {
+      const result = await adminRequest(url, "PATCH", body);
+      toast.success(successMessage);
+      if (result.warning) {
+        toast.warning(result.warning);
+      }
+      router.refresh();
+      return true;
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not save the change.");
+      return false;
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function inviteLive(url: string, body: unknown, successMessage: string) {
+    setSaving(true);
+    try {
+      const result = await adminRequest(url, "POST", body);
+      toast.success(successMessage);
+      if (result.warning) {
+        toast.warning(result.warning);
+      }
+      router.refresh();
+      return typeof result.id === "string" ? result.id : null;
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not add the record.");
+      return null;
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleClientSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     const nextNotes = toSentenceList(clientDraft.notes);
+
+    if (draftMode === "create-client" && live) {
+      const created = await inviteLive(
+        "/api/admin/clients",
+        {
+          companyName: clientDraft.companyName.trim(),
+          contactName: clientDraft.primaryContactName.trim(),
+          email: clientDraft.primaryContactEmail.trim(),
+          phone: clientDraft.primaryContactPhone.trim() || undefined,
+          notes: clientDraft.notes
+        },
+        `Client added. We've emailed ${clientDraft.primaryContactEmail.trim()} a link to set their password.`
+      );
+      if (created) {
+        setSelectedKey(`client:${created}`);
+        setDraftMode(null);
+      }
+      return;
+    }
 
     if (draftMode === "create-client") {
       const nextClient: ClientDetail = {
@@ -387,6 +453,36 @@ export function AdminManagementWorkspace({
       return;
     }
 
+    if (live) {
+      const original = selectedRecord.client;
+      const saved = await saveLive(
+        `/api/admin/clients/${original.id}`,
+        {
+          companyName: clientDraft.companyName.trim(),
+          tradingName: clientDraft.tradingName.trim(),
+          primaryContactName: clientDraft.primaryContactName.trim(),
+          primaryContactEmail: clientDraft.primaryContactEmail.trim(),
+          primaryContactPhone: clientDraft.primaryContactPhone.trim(),
+          billingContactName: clientDraft.billingContactName.trim(),
+          billingContactEmail: clientDraft.billingContactEmail.trim(),
+          billingContactPhone: clientDraft.billingContactPhone.trim(),
+          status: clientDraft.status,
+          onboardingStatus: clientDraft.onboardingStatus,
+          // The form shows the address as one line, so only send it when it was edited.
+          addressLine1:
+            clientDraft.address.trim() !== buildClientDraft(original).address.trim()
+              ? clientDraft.address.trim()
+              : undefined,
+          notes: clientDraft.notes
+        },
+        "Client profile saved."
+      );
+      if (saved) {
+        setDraftMode(null);
+      }
+      return;
+    }
+
     const nextClient: ClientDetail = {
       ...selectedRecord.client,
       companyName: clientDraft.companyName.trim(),
@@ -411,12 +507,31 @@ export function AdminManagementWorkspace({
     toast.success("Client profile updated.");
   }
 
-  function handleOperatorSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleOperatorSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     const nextNotes = toSentenceList(operatorDraft.notes);
     const nextRegions = toTagList(operatorDraft.regions);
     const nextSkillTags = toTagList(operatorDraft.skillTags);
+
+    if (draftMode === "create-operator" && live) {
+      const created = await inviteLive(
+        "/api/admin/operators",
+        {
+          fullName: operatorDraft.displayName.trim(),
+          email: operatorDraft.email.trim(),
+          location: nextRegions[0],
+          skillTags: nextSkillTags,
+          notes: operatorDraft.notes
+        },
+        `Operator added. We've emailed ${operatorDraft.email.trim()} a link to set their password.`
+      );
+      if (created) {
+        setSelectedKey(`operator:${created}`);
+        setDraftMode(null);
+      }
+      return;
+    }
 
     if (draftMode === "create-operator") {
       const nextOperator: OperatorDetail = {
@@ -456,6 +571,25 @@ export function AdminManagementWorkspace({
     }
 
     if (draftMode !== "edit-operator" || !selectedRecord || selectedRecord.kind !== "operator") {
+      return;
+    }
+
+    if (live) {
+      const saved = await saveLive(
+        `/api/admin/operators/${selectedRecord.operator.id}`,
+        {
+          displayName: operatorDraft.displayName.trim(),
+          regions: nextRegions,
+          skillTags: nextSkillTags,
+          verificationStatus: operatorDraft.verificationStatus,
+          onboardingStatus: operatorDraft.onboardingStatus,
+          notes: operatorDraft.notes
+        },
+        "Operator profile saved."
+      );
+      if (saved) {
+        setDraftMode(null);
+      }
       return;
     }
 
@@ -503,8 +637,28 @@ export function AdminManagementWorkspace({
     toast.success("Operator profile updated.");
   }
 
-  function toggleSelectedLifecycle() {
+  async function toggleSelectedLifecycle() {
     if (!selectedRecord) {
+      return;
+    }
+
+    if (live) {
+      if (selectedRecord.kind === "client") {
+        const nextStatus = selectedRecord.client.status === "inactive" ? "active" : "inactive";
+        await saveLive(
+          `/api/admin/clients/${selectedRecord.client.id}`,
+          { status: nextStatus },
+          nextStatus === "inactive" ? "Client suspended." : "Client reactivated."
+        );
+        return;
+      }
+
+      const nextIsActive = !selectedRecord.operator.isActive;
+      await saveLive(
+        `/api/admin/operators/${selectedRecord.operator.id}`,
+        { isActive: nextIsActive },
+        nextIsActive ? "Operator reactivated." : "Operator suspended."
+      );
       return;
     }
 
@@ -857,7 +1011,9 @@ export function AdminManagementWorkspace({
               </Field>
 
               <div className="flex flex-wrap gap-3">
-                <Button type="submit">{draftMode === "create-client" ? "Create client" : "Save client"}</Button>
+                <Button type="submit" disabled={saving}>
+                  {saving ? "Saving..." : draftMode === "create-client" ? (live ? "Create and invite" : "Create client") : "Save client"}
+                </Button>
                 <Button type="button" variant="secondary" onClick={cancelDraft}>
                   Cancel
                 </Button>
@@ -882,9 +1038,17 @@ export function AdminManagementWorkspace({
                     required
                   />
                 </Field>
-                <Field label="Email">
+                <Field
+                  label="Email"
+                  hint={
+                    live && draftMode === "edit-operator"
+                      ? "This is their sign-in email. They can change it from their own account."
+                      : undefined
+                  }
+                >
                   <Input
                     type="email"
+                    disabled={live && draftMode === "edit-operator"}
                     value={operatorDraft.email}
                     onChange={(event) =>
                       setOperatorDraft((current) => ({ ...current, email: event.target.value }))
@@ -958,8 +1122,14 @@ export function AdminManagementWorkspace({
               </Field>
 
               <div className="flex flex-wrap gap-3">
-                <Button type="submit">
-                  {draftMode === "create-operator" ? "Create operator" : "Save operator"}
+                <Button type="submit" disabled={saving}>
+                  {saving
+                    ? "Saving..."
+                    : draftMode === "create-operator"
+                      ? live
+                        ? "Create and invite"
+                        : "Create operator"
+                      : "Save operator"}
                 </Button>
                 <Button type="button" variant="secondary" onClick={cancelDraft}>
                   Cancel
@@ -1001,7 +1171,12 @@ export function AdminManagementWorkspace({
                       <Pencil className="mr-2 h-4 w-4" />
                       Edit
                     </Button>
-                    <Button variant="secondary" className="w-full sm:w-auto" onClick={toggleSelectedLifecycle}>
+                    <Button
+                      variant="secondary"
+                      className="w-full sm:w-auto"
+                      onClick={toggleSelectedLifecycle}
+                      disabled={saving}
+                    >
                       {selectedRecord.primaryStatus === "inactive" ? (
                         <PlayCircle className="mr-2 h-4 w-4" />
                       ) : (
@@ -1009,10 +1184,12 @@ export function AdminManagementWorkspace({
                       )}
                       {selectedRecord.primaryStatus === "inactive" ? "Reactivate" : "Suspend"}
                     </Button>
-                    <Button variant="secondary" className="w-full sm:w-auto" onClick={deleteSelected}>
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Delete
-                    </Button>
+                    {live ? null : (
+                      <Button variant="secondary" className="w-full sm:w-auto" onClick={deleteSelected}>
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete
+                      </Button>
+                    )}
                     <Link href={selectedRecord.detailHref} className="block">
                       <Button className="w-full sm:w-auto">
                         Open detail page <ArrowRight className="ml-2 h-4 w-4" />

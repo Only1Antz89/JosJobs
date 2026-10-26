@@ -4,6 +4,9 @@ import { getAdminCampaigns } from "@/lib/queries/campaigns";
 import { createCampaign } from "@/lib/services/admin-communications";
 import { createCampaignSchema } from "@/lib/validation/campaign";
 
+// Admin data is private and changes constantly: never cache it.
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   await requireAdmin();
   const campaigns = await getAdminCampaigns();

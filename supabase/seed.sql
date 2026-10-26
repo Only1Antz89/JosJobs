@@ -100,14 +100,19 @@ values
   ('77777777-7777-7777-7777-777777777779', '66666666-6666-6666-6666-666666666668', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbb003', 'pending', 'Accreditation and badge issuing experience.'),
   ('77777777-7777-7777-7777-777777777780', '66666666-6666-6666-6666-666666666669', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbb006', 'pending', 'Production support for large events.'),
   ('77777777-7777-7777-7777-777777777781', '66666666-6666-6666-6666-666666666670', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbb009', 'accepted', 'Brand ambassador with strong lead capture.'),
-  ('77777777-7777-7777-7777-777777777782', '66666666-6666-6666-6666-666666666670', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbb001', 'accepted', 'Confident product demo and guest engagement background.')
+  ('77777777-7777-7777-7777-777777777782', '66666666-6666-6666-6666-666666666670', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbb001', 'accepted', 'Confident product demo and guest engagement background.'),
+  ('77777777-7777-7777-7777-777777777783', '66666666-6666-6666-6666-666666666670', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbb003', 'accepted', 'Registration and guest services cover for the pop-up.')
 on conflict (id) do nothing;
 
-insert into public.ratings (id, event_id, organization_id, staff_id, organiser_id, rating, comment)
+insert into public.ratings (
+  id, event_id, job_id, organization_id, staff_id, organiser_id,
+  reliability_score, professionalism_score, communication_score, customer_service_score, pressure_handling_score,
+  overall_score, comment
+)
 values
-  ('88888888-8888-8888-8888-888888888881', '55555555-5555-5555-5555-555555555554', '22222222-2222-2222-2222-222222222222', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbb011', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa2', 5, 'Fantastic with VIP arrivals and guest calm under pressure.'),
-  ('88888888-8888-8888-8888-888888888882', '55555555-5555-5555-5555-555555555554', '22222222-2222-2222-2222-222222222222', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbb012', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa2', 4, 'Solid bartender and reliable on close-down.'),
-  ('88888888-8888-8888-8888-888888888883', '55555555-5555-5555-5555-555555555556', '33333333-3333-3333-3333-333333333333', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbb009', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa3', 5, 'Confident seller, strong brand energy, delivered quality leads.'),
-  ('88888888-8888-8888-8888-888888888884', '55555555-5555-5555-5555-555555555556', '33333333-3333-3333-3333-333333333333', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbb001', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa3', 4, 'Professional and personable with customers all day.'),
-  ('88888888-8888-8888-8888-888888888885', '55555555-5555-5555-5555-555555555556', '33333333-3333-3333-3333-333333333333', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbb003', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa3', 5, 'Registration and guest handling were exceptional.')
+  ('88888888-8888-8888-8888-888888888881', '55555555-5555-5555-5555-555555555554', '66666666-6666-6666-6666-666666666666', '22222222-2222-2222-2222-222222222222', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbb011', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa2', 5, 5, 5, 5, 5, 5.00, 'Fantastic with VIP arrivals and guest calm under pressure.'),
+  ('88888888-8888-8888-8888-888888888882', '55555555-5555-5555-5555-555555555554', '66666666-6666-6666-6666-666666666667', '22222222-2222-2222-2222-222222222222', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbb012', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa2', 4, 4, 4, 4, 4, 4.00, 'Solid bartender and reliable on close-down.'),
+  ('88888888-8888-8888-8888-888888888883', '55555555-5555-5555-5555-555555555556', '66666666-6666-6666-6666-666666666670', '33333333-3333-3333-3333-333333333333', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbb009', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa3', 5, 5, 5, 5, 5, 5.00, 'Confident seller, strong brand energy, delivered quality leads.'),
+  ('88888888-8888-8888-8888-888888888884', '55555555-5555-5555-5555-555555555556', '66666666-6666-6666-6666-666666666670', '33333333-3333-3333-3333-333333333333', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbb001', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa3', 4, 4, 4, 4, 4, 4.00, 'Professional and personable with customers all day.'),
+  ('88888888-8888-8888-8888-888888888885', '55555555-5555-5555-5555-555555555556', '66666666-6666-6666-6666-666666666670', '33333333-3333-3333-3333-333333333333', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbb003', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa3', 5, 5, 5, 5, 5, 5.00, 'Registration and guest handling were exceptional.')
 on conflict (id) do nothing;

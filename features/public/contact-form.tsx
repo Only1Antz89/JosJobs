@@ -8,7 +8,7 @@ import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { CONTACT_EVENT_TYPES, CONTACT_SERVICE_NEEDS } from "@/lib/site-content";
+import { CONTACT_EVENT_TYPES, CONTACT_SERVICE_NEEDS, SITE_CONTACT } from "@/lib/site-content";
 import { contactInquirySchema } from "@/lib/validation/schemas";
 
 type ContactFormState = {
@@ -31,6 +31,9 @@ export function ContactForm() {
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitted, setSubmitted] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState("");
+  const [website, setWebsite] = useState("");
 
   const toggleServiceNeed = (value: string) => {
     setForm((current) => ({
@@ -44,13 +47,12 @@ export function ContactForm() {
   if (submitted) {
     return (
       <Card className="space-y-4">
-        <Badge variant="success">Enquiry staged</Badge>
+        <Badge variant="success">Enquiry sent</Badge>
         <h2 className="font-display text-3xl font-semibold tracking-[-0.04em] text-ink">
-          Intake captured for review.
+          Thanks, we&apos;ve received your brief.
         </h2>
         <p className="text-base leading-7 text-slate">
-          This form validates and confirms the brief locally. Delivery routing can be connected later without
-          changing the company intake flow.
+          The Athena Pro team will review it and reply to the email address you gave us.
         </p>
         <Button variant="secondary" onClick={() => setSubmitted(false)}>
           Submit another enquiry
@@ -135,8 +137,23 @@ export function ContactForm() {
         />
       </Field>
 
+      {/* Hidden from people; bots that fill it in are ignored by the server. */}
+      <div aria-hidden="true" className="hidden">
+        <label>
+          Website
+          <input tabIndex={-1} autoComplete="off" value={website} onChange={(event) => setWebsite(event.target.value)} />
+        </label>
+      </div>
+
+      {sendError ? (
+        <p role="alert" className="text-sm text-red-400">
+          {sendError}
+        </p>
+      ) : null}
+
       <Button
-        onClick={() => {
+        disabled={sending}
+        onClick={async () => {
           const parsed = contactInquirySchema.safeParse(form);
 
           if (!parsed.success) {
@@ -153,10 +170,33 @@ export function ContactForm() {
           }
 
           setErrors({});
-          setSubmitted(true);
+          setSendError("");
+          setSending(true);
+
+          try {
+            const response = await fetch("/api/contact", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ ...parsed.data, website })
+            });
+            const payload = (await response.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+
+            if (!response.ok || !payload.ok) {
+              setSendError(
+                payload.error ?? `We couldn't send your enquiry. Please email ${SITE_CONTACT.supportEmail}.`
+              );
+              return;
+            }
+
+            setSubmitted(true);
+          } catch {
+            setSendError(`We couldn't send your enquiry. Please email ${SITE_CONTACT.supportEmail}.`);
+          } finally {
+            setSending(false);
+          }
         }}
       >
-        Submit enquiry
+        {sending ? "Sending..." : "Submit enquiry"}
       </Button>
     </Card>
   );

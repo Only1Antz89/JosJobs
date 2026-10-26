@@ -1,4 +1,7 @@
 import { cache } from "react";
+import { requireAdmin } from "@/lib/auth/require-admin";
+import { getRuntimeMode } from "@/lib/env";
+import { loadLiveAdminDataset } from "@/lib/queries/admin-live";
 import { buildBaseDemoDatabase } from "@/lib/data/demo-seed";
 import { buildRankedStaff } from "@/lib/domain/ranking";
 import { DEFAULT_EMAIL_TEMPLATES } from "@/lib/email/catalog";
@@ -234,6 +237,15 @@ function buildInvoiceStatus(balance: number, dueDate: string) {
 }
 
 export const getAdminDataset = cache(async (): Promise<AdminDataset> => {
+  if (getRuntimeMode() === "live") {
+    const { adminUser } = await requireAdmin();
+    return loadLiveAdminDataset(adminUser);
+  }
+
+  return buildDemoAdminDataset();
+});
+
+function buildDemoAdminDataset(): AdminDataset {
   const database = buildBaseDemoDatabase();
   const membershipsByProfileId = new Map(
     database.organizationMemberships.map((membership) => [membership.profileId, membership])
@@ -969,4 +981,4 @@ export const getAdminDataset = cache(async (): Promise<AdminDataset> => {
     exports,
     auditEntries
   };
-});
+}

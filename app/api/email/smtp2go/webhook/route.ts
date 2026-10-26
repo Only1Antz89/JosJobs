@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
-import { env } from "@/lib/env";
+import { env, getRuntimeMode } from "@/lib/env";
 import { processSmtp2goWebhook } from "@/lib/services/admin-communications";
 
 function isAuthorised(request: Request) {
   if (!env.smtp2goWebhookAuth) {
-    return true;
+    // Without a shared secret anyone could post fake bounces and unsubscribe real
+    // recipients, so a live site refuses the webhook until SMTP2GO_WEBHOOK_AUTH is set.
+    return getRuntimeMode() !== "live";
   }
 
   return request.headers.get("authorization") === env.smtp2goWebhookAuth;

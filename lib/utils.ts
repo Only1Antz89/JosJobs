@@ -65,3 +65,13 @@ export function average(values: number[]) {
 
   return values.reduce((sum, value) => sum + value, 0) / values.length;
 }
+
+// Exact amounts with pence, for invoices and payments.
+export function formatMoney(amount: number) {
+  return new Intl.NumberFormat("en-GB", {
+    style: "currency",
+    currency: "GBP",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(amount);
+}

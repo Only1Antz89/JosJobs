@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
+import { adminRoute, readJson } from "@/lib/auth/admin-route";
 import { requireAdmin } from "@/lib/auth/require-admin";
 import { getAdminOperators } from "@/lib/queries/operators";
-import { createOperatorSchema } from "@/lib/validation/operator";
+import { inviteOperator, inviteOperatorSchema } from "@/lib/services/admin-invites";
+
+// Admin data is private and changes constantly: never cache it.
+export const dynamic = "force-dynamic";
 
 export async function GET() {
   await requireAdmin();
@@ -9,16 +13,12 @@ export async function GET() {
   return NextResponse.json(operators);
 }
 
-export async function POST(request: Request) {
-  await requireAdmin();
-  const body = await request.json();
-  const payload = createOperatorSchema.parse(body);
-
-  return NextResponse.json(
-    {
-      message: "Manual operator creation should be implemented with a privileged write path.",
-      payload
-    },
-    { status: 202 }
-  );
-}
+// Creates an operator account and emails them a link to set their password.
+export const POST = adminRoute<Record<string, never>>(
+  async (request, { adminUser }) => {
+    const input = inviteOperatorSchema.parse(await readJson(request));
+    const result = await inviteOperator(adminUser.id, input, new URL(request.url).origin);
+    return NextResponse.json({ ok: true, ...result }, { status: 201 });
+  },
+  { roles: ["operations_admin"], liveOnly: true }
+);
