@@ -1,9 +1,11 @@
 import { notFound } from "next/navigation";
 import { AuditTimeline } from "@/components/admin/audit-timeline";
+import { ChargeRateForm } from "@/components/admin/charge-rate-form";
 import { AdminDataTable } from "@/components/admin/data-table";
 import { DetailHeader } from "@/components/admin/detail-header";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { TabbedDetailLayout } from "@/components/admin/tabbed-detail-layout";
+import { getRuntimeMode } from "@/lib/env";
 import { getAdminAssignmentById } from "@/lib/queries/assignments";
 import { formatCurrency, formatDateTime } from "@/lib/utils";
 
@@ -107,7 +109,13 @@ export default async function AssignmentDetailPage({
           />
         </section>
 
-        <section id="financials">
+        <section id="financials" className="space-y-4">
+          <ChargeRateForm
+            assignmentId={assignment.id}
+            chargeRate={assignment.chargeRate}
+            payRate={assignment.payRate}
+            live={getRuntimeMode() === "live"}
+          />
           <AdminDataTable
             columns={[
               { key: "field", label: "Field" },

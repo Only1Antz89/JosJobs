@@ -462,6 +462,30 @@ create table if not exists public.audit_logs (
   created_at timestamptz not null default now()
 );
 
+-- Live admin portal wiring. The marketplace tables (organizations, staff profiles,
+-- jobs) are the source of truth for clients, operators and assignments. The admin
+-- tables above hold the extra admin-only details and are linked one-to-one.
+alter table public.jobs add column if not exists charge_rate numeric(10,2) check (charge_rate is null or charge_rate >= 0);
+alter table public.operators add column if not exists notes text;
+alter table public.client_invoices add column if not exists notes text;
+alter table public.client_invoices add column if not exists sent_at timestamptz;
+alter table public.client_invoices add column if not exists created_by uuid references public.profiles(id);
+alter table public.operator_payouts add column if not exists notes text;
+alter table public.operator_payouts add column if not exists created_by uuid references public.profiles(id);
+
+create unique index if not exists idx_clients_organization on public.clients(organization_id) where organization_id is not null;
+
+create table if not exists public.invoice_job_links (
+  invoice_id uuid not null references public.client_invoices(id) on delete cascade,
+  job_id uuid not null references public.jobs(id) on delete cascade,
+  amount numeric(12,2) not null default 0,
+  primary key (invoice_id, job_id)
+);
+
+alter table if exists public.invoice_job_links enable row level security;
+
+create sequence if not exists public.client_invoice_number_seq start 1001;
+
 create schema if not exists private;
 revoke all on schema private from public;
 grant usage on schema private to anon, authenticated, service_role;
@@ -858,6 +882,13 @@ using (requested_by = auth.uid() or private.is_active_admin_user());
 drop policy if exists "export_jobs_manage_admin_only" on public.export_jobs;
 create policy "export_jobs_manage_admin_only"
 on public.export_jobs
+for all
+using (private.is_active_admin_user())
+with check (private.is_active_admin_user());
+
+drop policy if exists "invoice_job_links_admin_only" on public.invoice_job_links;
+create policy "invoice_job_links_admin_only"
+on public.invoice_job_links
 for all
 using (private.is_active_admin_user())
 with check (private.is_active_admin_user());
