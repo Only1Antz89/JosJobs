@@ -81,7 +81,8 @@ function dropUndefined<T extends Row>(row: T): Partial<T> {
 export async function writeAuditLog(
   client: AdminClient,
   entry: {
-    actorId: string;
+    // null for system actions such as the Stripe webhook.
+    actorId: string | null;
     entityType: string;
     entityId: string;
     action: string;
@@ -92,7 +93,7 @@ export async function writeAuditLog(
   }
 ) {
   const { error } = await client.from("audit_logs").insert({
-    actor_profile_id: entry.actorId,
+    actor_profile_id: entry.actorId || null,
     entity_type: entry.entityType,
     entity_id: entry.entityId,
     action: entry.action,

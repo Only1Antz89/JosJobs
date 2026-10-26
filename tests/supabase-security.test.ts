@@ -33,6 +33,7 @@ const athenaRlsTables = [
   "operator_reviews",
   "client_invoices",
   "invoice_assignment_links",
+  "invoice_lines",
   "client_payments",
   "operator_payouts",
   "onboarding_checklists",
@@ -134,5 +135,22 @@ describe("supabase security hardening", () => {
     expect(policiesSql).toContain('create policy "organizations_insert_owner"');
     expect(policiesSql).toContain("with check (auth.uid() is not null);");
     expect(policiesSql).not.toContain("with check (true);");
+  });
+
+  it("keeps finance functions server-only", () => {
+    for (const signature of [
+      "public.next_client_invoice_number()",
+      "public.record_client_payment(uuid, numeric, date, text, text, uuid)"
+    ]) {
+      const escaped = signature.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      expect(athenaAdminSql).toMatch(
+        new RegExp(`revoke execute on function ${escaped} from public, anon, authenticated;`)
+      );
+      expect(athenaAdminSql).toMatch(new RegExp(`grant execute on function ${escaped} to service_role;`));
+    }
+  });
+
+  it("hides draft and void invoices from clients", () => {
+    expect(athenaAdminSql).toMatch(/is_client_owner\(client_id\) and status not in \('draft', 'void'\)/);
   });
 });

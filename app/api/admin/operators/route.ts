@@ -4,6 +4,9 @@ import { requireAdmin } from "@/lib/auth/require-admin";
 import { getAdminOperators } from "@/lib/queries/operators";
 import { inviteOperator, inviteOperatorSchema } from "@/lib/services/admin-invites";
 
+// Admin data is private and changes constantly: never cache it.
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   await requireAdmin();
   const operators = await getAdminOperators();

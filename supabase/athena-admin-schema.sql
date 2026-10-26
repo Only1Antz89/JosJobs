@@ -475,16 +475,115 @@ alter table public.operator_payouts add column if not exists created_by uuid ref
 
 create unique index if not exists idx_clients_organization on public.clients(organization_id) where organization_id is not null;
 
-create table if not exists public.invoice_job_links (
+-- Finance: invoices are raised from finished jobs (one line per job, plus any
+-- extra lines), emailed with bank details and an optional card payment link,
+-- and paid by bank transfer (recorded by an admin) or card (recorded by the
+-- Stripe webhook).
+alter table public.client_invoices add column if not exists access_token uuid not null default gen_random_uuid();
+alter table public.client_invoices add column if not exists paid_at timestamptz;
+alter table public.client_invoices add column if not exists voided_at timestamptz;
+alter table public.client_invoices add column if not exists stripe_checkout_session_id text;
+alter table public.operator_payouts add column if not exists reference text;
+
+create unique index if not exists idx_client_invoices_access_token on public.client_invoices(access_token);
+
+-- invoice_job_links was an unreleased first draft of invoice_lines.
+drop table if exists public.invoice_job_links;
+
+create table if not exists public.invoice_lines (
+  id uuid primary key default gen_random_uuid(),
   invoice_id uuid not null references public.client_invoices(id) on delete cascade,
-  job_id uuid not null references public.jobs(id) on delete cascade,
+  job_id uuid references public.jobs(id) on delete set null,
+  description text not null,
+  quantity numeric(10,2) not null default 1,
+  unit_amount numeric(12,2) not null default 0,
   amount numeric(12,2) not null default 0,
-  primary key (invoice_id, job_id)
+  position integer not null default 0,
+  created_at timestamptz not null default now()
 );
 
-alter table if exists public.invoice_job_links enable row level security;
+create index if not exists idx_invoice_lines_invoice on public.invoice_lines(invoice_id, position);
+create index if not exists idx_invoice_lines_job on public.invoice_lines(job_id) where job_id is not null;
+
+-- A card payment is recorded once per Stripe payment, however often the webhook retries.
+create unique index if not exists idx_client_payments_external_reference
+  on public.client_payments(payment_method, external_reference)
+  where external_reference is not null and external_reference <> '';
+
+alter table if exists public.invoice_lines enable row level security;
 
 create sequence if not exists public.client_invoice_number_seq start 1001;
+
+-- Next invoice number, e.g. ATH-1001. Server-only.
+create or replace function public.next_client_invoice_number()
+returns text
+language sql
+volatile
+security definer
+set search_path = public
+as $$
+  select 'ATH-' || nextval('public.client_invoice_number_seq')::text;
+$$;
+
+revoke execute on function public.next_client_invoice_number() from public, anon, authenticated;
+grant execute on function public.next_client_invoice_number() to service_role;
+
+-- Records a payment and recalculates the invoice in one transaction, so a bank
+-- transfer and a card payment arriving together can't overwrite each other.
+-- Returns the new payment id, or null when this payment was already recorded.
+create or replace function public.record_client_payment(
+  p_invoice_id uuid,
+  p_amount numeric,
+  p_payment_date date,
+  p_payment_method text,
+  p_external_reference text,
+  p_recorded_by uuid
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_invoice public.client_invoices%rowtype;
+  v_payment_id uuid;
+  v_paid numeric(12,2);
+begin
+  select * into v_invoice from public.client_invoices where id = p_invoice_id for update;
+
+  if not found then
+    raise exception 'Invoice not found' using errcode = 'P0002';
+  end if;
+
+  if v_invoice.status in ('draft', 'void') then
+    raise exception 'Invoice % is %, so it cannot take payments', v_invoice.invoice_number, v_invoice.status
+      using errcode = 'P0001';
+  end if;
+
+  insert into public.client_payments (
+    client_id, invoice_id, amount, payment_date, payment_method, external_reference, recorded_by
+  )
+  values (
+    v_invoice.client_id, p_invoice_id, p_amount, p_payment_date, p_payment_method,
+    nullif(p_external_reference, ''), p_recorded_by
+  )
+  on conflict do nothing
+  returning id into v_payment_id;
+
+  select coalesce(sum(amount), 0) into v_paid from public.client_payments where invoice_id = p_invoice_id;
+
+  update public.client_invoices
+  set amount_paid = v_paid,
+      status = case when v_paid >= total_amount then 'paid' else 'sent' end,
+      paid_at = case when v_paid >= total_amount then coalesce(paid_at, now()) else null end
+  where id = p_invoice_id;
+
+  return v_payment_id;
+end;
+$$;
+
+revoke execute on function public.record_client_payment(uuid, numeric, date, text, text, uuid) from public, anon, authenticated;
+grant execute on function public.record_client_payment(uuid, numeric, date, text, text, uuid) to service_role;
 
 create schema if not exists private;
 revoke all on schema private from public;
@@ -746,7 +845,10 @@ drop policy if exists "client_invoices_select_related_or_admin" on public.client
 create policy "client_invoices_select_related_or_admin"
 on public.client_invoices
 for select
-using (private.is_client_owner(client_id) or private.is_active_admin_user());
+using (
+  (private.is_client_owner(client_id) and status not in ('draft', 'void'))
+  or private.is_active_admin_user()
+);
 
 drop policy if exists "client_invoices_manage_admin_only" on public.client_invoices;
 create policy "client_invoices_manage_admin_only"
@@ -886,9 +988,24 @@ for all
 using (private.is_active_admin_user())
 with check (private.is_active_admin_user());
 
-drop policy if exists "invoice_job_links_admin_only" on public.invoice_job_links;
-create policy "invoice_job_links_admin_only"
-on public.invoice_job_links
+drop policy if exists "invoice_lines_select_related_or_admin" on public.invoice_lines;
+create policy "invoice_lines_select_related_or_admin"
+on public.invoice_lines
+for select
+using (
+  private.is_active_admin_user()
+  or exists (
+    select 1
+    from public.client_invoices i
+    where i.id = invoice_lines.invoice_id
+      and i.status not in ('draft', 'void')
+      and private.is_client_owner(i.client_id)
+  )
+);
+
+drop policy if exists "invoice_lines_manage_admin_only" on public.invoice_lines;
+create policy "invoice_lines_manage_admin_only"
+on public.invoice_lines
 for all
 using (private.is_active_admin_user())
 with check (private.is_active_admin_user());

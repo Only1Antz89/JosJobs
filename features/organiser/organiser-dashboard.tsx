@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import { ClientInvoicesCard } from "@/features/organiser/client-invoices-card";
 import { toast } from "sonner";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { SiteHeader } from "@/components/layout/site-header";
@@ -175,6 +176,8 @@ export function OrganiserDashboard() {
             hint="Delivered work now eligible for structured operator review."
           />
         </div>
+
+        <ClientInvoicesCard />
 
         <div className="mt-8 grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
           <div className="space-y-6">

@@ -4,6 +4,9 @@ import { requireAdmin } from "@/lib/auth/require-admin";
 import { AppError } from "@/lib/errors";
 import { listGoogleDocs } from "@/lib/services/admin-communications";
 
+// Admin data is private and changes constantly: never cache it.
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   await requireAdmin();
   const accessToken = cookies().get("athena_google_access_token")?.value;

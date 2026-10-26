@@ -464,7 +464,8 @@ export function buildLiveAdminDataset(rows: LiveAdminRows): AdminDataset {
   const allInvoices: Array<ClientFinancialRecord & { clientId: string }> = [];
   for (const row of rows.invoiceRows) {
     const organizationId = orgIdByClientRowId.get(str(row.client_id));
-    if (!organizationId) continue;
+    // Void invoices were cancelled; they don't count towards spend or balances.
+    if (!organizationId || str(row.status) === "void") continue;
     const record = buildInvoiceRecord(row, now);
     const bucket = invoicesByOrgId.get(organizationId) ?? [];
     bucket.push(record);
