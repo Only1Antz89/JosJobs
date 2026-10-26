@@ -2,7 +2,7 @@ import { BRAND, formatStatusLabel } from "@/lib/brand";
 import { SITE_CONTACT } from "@/lib/site-content";
 import type { CampaignSummary } from "@/types/admin";
 
-function escapeHtml(value: string) {
+export function escapeHtml(value: string) {
   return value
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")

@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { getRuntimeMode } from "@/lib/env";
+import { getRuntimeMode, isProductionDemo } from "@/lib/env";
 import { getAdminDataset } from "@/lib/queries/admin-dataset";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import type { AdminRole } from "@/types/admin";
@@ -36,6 +36,13 @@ export async function requireAdmin({
   redirectToLogin?: boolean;
 } = {}) {
   if (getRuntimeMode() === "demo") {
+    // The demo admin workspace is open to anyone, so never serve it from a production
+    // deploy that has lost its Supabase settings.
+    if (isProductionDemo()) {
+      console.error("[athena] Admin access refused: production build is running without Supabase.");
+      denyAdminAccess(redirectToLogin);
+    }
+
     const data = await getAdminDataset();
     return {
       user: {

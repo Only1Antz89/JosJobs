@@ -77,7 +77,7 @@ The portal currently uses `lib/queries/admin-dataset.ts` to:
 
 To move from demo scaffold to live admin operations:
 
-1. Provision the SQL objects in [`supabase/athena-admin-schema.sql`](/Users/anthonyosei/Projects/JosJobs/supabase/athena-admin-schema.sql).
+1. Provision the SQL objects in [`supabase/athena-admin-schema.sql`](../supabase/athena-admin-schema.sql).
 2. Back `requireAdmin()` with `admin_users` records in Supabase Auth.
 3. Replace demo query builders with service-role server queries or admin-safe RPCs.
 4. Wire POST routes to server actions or route handlers that:

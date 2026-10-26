@@ -1365,7 +1365,6 @@ export class SupabaseDataProvider implements StaffBookDataProvider {
         customer_service_score: input.customerServiceScore,
         pressure_handling_score: input.pressureHandlingScore,
         overall_score: overallScore,
-        rating: overallScore,
         comment: input.comment
       })
       .select("*")

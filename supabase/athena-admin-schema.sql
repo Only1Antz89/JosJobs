@@ -462,7 +462,11 @@ create table if not exists public.audit_logs (
   created_at timestamptz not null default now()
 );
 
-create or replace function public.is_active_admin_user()
+create schema if not exists private;
+revoke all on schema private from public;
+grant usage on schema private to anon, authenticated, service_role;
+
+create or replace function private.is_active_admin_user()
 returns boolean
 language sql
 stable
@@ -477,11 +481,10 @@ as $$
   );
 $$;
 
-revoke execute on function public.is_active_admin_user() from public;
-revoke execute on function public.is_active_admin_user() from anon;
-revoke execute on function public.is_active_admin_user() from authenticated;
+revoke execute on function private.is_active_admin_user() from public;
+grant execute on function private.is_active_admin_user() to anon, authenticated, service_role;
 
-create or replace function public.is_client_owner(client_uuid uuid)
+create or replace function private.is_client_owner(client_uuid uuid)
 returns boolean
 language sql
 stable
@@ -496,11 +499,10 @@ as $$
   );
 $$;
 
-revoke execute on function public.is_client_owner(uuid) from public;
-revoke execute on function public.is_client_owner(uuid) from anon;
-revoke execute on function public.is_client_owner(uuid) from authenticated;
+revoke execute on function private.is_client_owner(uuid) from public;
+grant execute on function private.is_client_owner(uuid) to anon, authenticated, service_role;
 
-create or replace function public.is_operator_owner(operator_uuid uuid)
+create or replace function private.is_operator_owner(operator_uuid uuid)
 returns boolean
 language sql
 stable
@@ -515,11 +517,10 @@ as $$
   );
 $$;
 
-revoke execute on function public.is_operator_owner(uuid) from public;
-revoke execute on function public.is_operator_owner(uuid) from anon;
-revoke execute on function public.is_operator_owner(uuid) from authenticated;
+revoke execute on function private.is_operator_owner(uuid) from public;
+grant execute on function private.is_operator_owner(uuid) to anon, authenticated, service_role;
 
-create or replace function public.is_assignment_client_owner(assignment_uuid uuid)
+create or replace function private.is_assignment_client_owner(assignment_uuid uuid)
 returns boolean
 language sql
 stable
@@ -535,11 +536,10 @@ as $$
   );
 $$;
 
-revoke execute on function public.is_assignment_client_owner(uuid) from public;
-revoke execute on function public.is_assignment_client_owner(uuid) from anon;
-revoke execute on function public.is_assignment_client_owner(uuid) from authenticated;
+revoke execute on function private.is_assignment_client_owner(uuid) from public;
+grant execute on function private.is_assignment_client_owner(uuid) to anon, authenticated, service_role;
 
-create or replace function public.is_assignment_operator(assignment_uuid uuid)
+create or replace function private.is_assignment_operator(assignment_uuid uuid)
 returns boolean
 language sql
 stable
@@ -562,9 +562,8 @@ as $$
   );
 $$;
 
-revoke execute on function public.is_assignment_operator(uuid) from public;
-revoke execute on function public.is_assignment_operator(uuid) from anon;
-revoke execute on function public.is_assignment_operator(uuid) from authenticated;
+revoke execute on function private.is_assignment_operator(uuid) from public;
+grant execute on function private.is_assignment_operator(uuid) to anon, authenticated, service_role;
 
 alter table if exists public.admin_users enable row level security;
 alter table if exists public.clients enable row level security;
@@ -599,150 +598,150 @@ drop policy if exists "clients_select_owner_or_admin" on public.clients;
 create policy "clients_select_owner_or_admin"
 on public.clients
 for select
-using (owner_user_id = auth.uid() or public.is_active_admin_user());
+using (owner_user_id = auth.uid() or private.is_active_admin_user());
 
 drop policy if exists "clients_manage_admin_only" on public.clients;
 create policy "clients_manage_admin_only"
 on public.clients
 for all
-using (public.is_active_admin_user())
-with check (public.is_active_admin_user());
+using (private.is_active_admin_user())
+with check (private.is_active_admin_user());
 
 drop policy if exists "operators_select_owner_or_admin" on public.operators;
 create policy "operators_select_owner_or_admin"
 on public.operators
 for select
-using (user_id = auth.uid() or public.is_active_admin_user());
+using (user_id = auth.uid() or private.is_active_admin_user());
 
 drop policy if exists "operators_manage_owner_or_admin" on public.operators;
 create policy "operators_manage_owner_or_admin"
 on public.operators
 for all
-using (user_id = auth.uid() or public.is_active_admin_user())
-with check (user_id = auth.uid() or public.is_active_admin_user());
+using (user_id = auth.uid() or private.is_active_admin_user())
+with check (user_id = auth.uid() or private.is_active_admin_user());
 
 drop policy if exists "operator_documents_select_related_or_admin" on public.operator_documents;
 create policy "operator_documents_select_related_or_admin"
 on public.operator_documents
 for select
-using (public.is_operator_owner(operator_id) or public.is_active_admin_user());
+using (private.is_operator_owner(operator_id) or private.is_active_admin_user());
 
 drop policy if exists "operator_documents_manage_related_or_admin" on public.operator_documents;
 create policy "operator_documents_manage_related_or_admin"
 on public.operator_documents
 for all
-using (public.is_operator_owner(operator_id) or public.is_active_admin_user())
-with check (public.is_operator_owner(operator_id) or public.is_active_admin_user());
+using (private.is_operator_owner(operator_id) or private.is_active_admin_user())
+with check (private.is_operator_owner(operator_id) or private.is_active_admin_user());
 
 drop policy if exists "assignments_select_related_or_admin" on public.assignments;
 create policy "assignments_select_related_or_admin"
 on public.assignments
 for select
 using (
-  public.is_assignment_client_owner(id)
-  or public.is_active_admin_user()
-  or public.is_assignment_operator(id)
+  private.is_assignment_client_owner(id)
+  or private.is_active_admin_user()
+  or private.is_assignment_operator(id)
 );
 
 drop policy if exists "assignments_manage_admin_only" on public.assignments;
 create policy "assignments_manage_admin_only"
 on public.assignments
 for all
-using (public.is_active_admin_user())
-with check (public.is_active_admin_user());
+using (private.is_active_admin_user())
+with check (private.is_active_admin_user());
 
 drop policy if exists "assignment_applications_select_related_or_admin" on public.assignment_applications;
 create policy "assignment_applications_select_related_or_admin"
 on public.assignment_applications
 for select
 using (
-  public.is_operator_owner(operator_id)
-  or public.is_active_admin_user()
-  or public.is_assignment_client_owner(assignment_id)
+  private.is_operator_owner(operator_id)
+  or private.is_active_admin_user()
+  or private.is_assignment_client_owner(assignment_id)
 );
 
 drop policy if exists "assignment_applications_manage_owner_or_admin" on public.assignment_applications;
 create policy "assignment_applications_manage_owner_or_admin"
 on public.assignment_applications
 for all
-using (public.is_operator_owner(operator_id) or public.is_active_admin_user())
-with check (public.is_operator_owner(operator_id) or public.is_active_admin_user());
+using (private.is_operator_owner(operator_id) or private.is_active_admin_user())
+with check (private.is_operator_owner(operator_id) or private.is_active_admin_user());
 
 drop policy if exists "client_operator_preferences_select_related_or_admin" on public.client_operator_preferences;
 create policy "client_operator_preferences_select_related_or_admin"
 on public.client_operator_preferences
 for select
 using (
-  public.is_client_owner(client_id)
-  or public.is_operator_owner(operator_id)
-  or public.is_active_admin_user()
+  private.is_client_owner(client_id)
+  or private.is_operator_owner(operator_id)
+  or private.is_active_admin_user()
 );
 
 drop policy if exists "client_operator_preferences_manage_client_or_admin" on public.client_operator_preferences;
 create policy "client_operator_preferences_manage_client_or_admin"
 on public.client_operator_preferences
 for all
-using (public.is_client_owner(client_id) or public.is_active_admin_user())
-with check (public.is_client_owner(client_id) or public.is_active_admin_user());
+using (private.is_client_owner(client_id) or private.is_active_admin_user())
+with check (private.is_client_owner(client_id) or private.is_active_admin_user());
 
 drop policy if exists "assignment_placements_select_related_or_admin" on public.assignment_placements;
 create policy "assignment_placements_select_related_or_admin"
 on public.assignment_placements
 for select
 using (
-  public.is_operator_owner(operator_id)
-  or public.is_active_admin_user()
-  or public.is_assignment_client_owner(assignment_id)
+  private.is_operator_owner(operator_id)
+  or private.is_active_admin_user()
+  or private.is_assignment_client_owner(assignment_id)
 );
 
 drop policy if exists "assignment_placements_manage_admin_only" on public.assignment_placements;
 create policy "assignment_placements_manage_admin_only"
 on public.assignment_placements
 for all
-using (public.is_active_admin_user())
-with check (public.is_active_admin_user());
+using (private.is_active_admin_user())
+with check (private.is_active_admin_user());
 
 drop policy if exists "operator_reviews_select_related_or_admin" on public.operator_reviews;
 create policy "operator_reviews_select_related_or_admin"
 on public.operator_reviews
 for select
 using (
-  public.is_operator_owner(operator_id)
-  or public.is_client_owner(client_id)
-  or public.is_active_admin_user()
+  private.is_operator_owner(operator_id)
+  or private.is_client_owner(client_id)
+  or private.is_active_admin_user()
 );
 
 drop policy if exists "operator_reviews_manage_client_or_admin" on public.operator_reviews;
 create policy "operator_reviews_manage_client_or_admin"
 on public.operator_reviews
 for all
-using (public.is_client_owner(client_id) or public.is_active_admin_user())
-with check (public.is_client_owner(client_id) or public.is_active_admin_user());
+using (private.is_client_owner(client_id) or private.is_active_admin_user())
+with check (private.is_client_owner(client_id) or private.is_active_admin_user());
 
 drop policy if exists "client_invoices_select_related_or_admin" on public.client_invoices;
 create policy "client_invoices_select_related_or_admin"
 on public.client_invoices
 for select
-using (public.is_client_owner(client_id) or public.is_active_admin_user());
+using (private.is_client_owner(client_id) or private.is_active_admin_user());
 
 drop policy if exists "client_invoices_manage_admin_only" on public.client_invoices;
 create policy "client_invoices_manage_admin_only"
 on public.client_invoices
 for all
-using (public.is_active_admin_user())
-with check (public.is_active_admin_user());
+using (private.is_active_admin_user())
+with check (private.is_active_admin_user());
 
 drop policy if exists "invoice_assignment_links_select_related_or_admin" on public.invoice_assignment_links;
 create policy "invoice_assignment_links_select_related_or_admin"
 on public.invoice_assignment_links
 for select
 using (
-  public.is_active_admin_user()
+  private.is_active_admin_user()
   or exists (
     select 1
     from public.client_invoices i
     where i.id = invoice_assignment_links.invoice_id
-      and public.is_client_owner(i.client_id)
+      and private.is_client_owner(i.client_id)
   )
 );
 
@@ -750,125 +749,125 @@ drop policy if exists "invoice_assignment_links_manage_admin_only" on public.inv
 create policy "invoice_assignment_links_manage_admin_only"
 on public.invoice_assignment_links
 for all
-using (public.is_active_admin_user())
-with check (public.is_active_admin_user());
+using (private.is_active_admin_user())
+with check (private.is_active_admin_user());
 
 drop policy if exists "client_payments_select_related_or_admin" on public.client_payments;
 create policy "client_payments_select_related_or_admin"
 on public.client_payments
 for select
-using (public.is_client_owner(client_id) or public.is_active_admin_user());
+using (private.is_client_owner(client_id) or private.is_active_admin_user());
 
 drop policy if exists "client_payments_manage_admin_only" on public.client_payments;
 create policy "client_payments_manage_admin_only"
 on public.client_payments
 for all
-using (public.is_active_admin_user())
-with check (public.is_active_admin_user());
+using (private.is_active_admin_user())
+with check (private.is_active_admin_user());
 
 drop policy if exists "operator_payouts_select_related_or_admin" on public.operator_payouts;
 create policy "operator_payouts_select_related_or_admin"
 on public.operator_payouts
 for select
-using (public.is_operator_owner(operator_id) or public.is_active_admin_user());
+using (private.is_operator_owner(operator_id) or private.is_active_admin_user());
 
 drop policy if exists "operator_payouts_manage_admin_only" on public.operator_payouts;
 create policy "operator_payouts_manage_admin_only"
 on public.operator_payouts
 for all
-using (public.is_active_admin_user())
-with check (public.is_active_admin_user());
+using (private.is_active_admin_user())
+with check (private.is_active_admin_user());
 
 drop policy if exists "onboarding_checklists_select_related_or_admin" on public.onboarding_checklists;
 create policy "onboarding_checklists_select_related_or_admin"
 on public.onboarding_checklists
 for select
 using (
-  public.is_active_admin_user()
-  or (entity_type = 'client' and public.is_client_owner(entity_id))
-  or (entity_type = 'operator' and public.is_operator_owner(entity_id))
+  private.is_active_admin_user()
+  or (entity_type = 'client' and private.is_client_owner(entity_id))
+  or (entity_type = 'operator' and private.is_operator_owner(entity_id))
 );
 
 drop policy if exists "onboarding_checklists_manage_admin_only" on public.onboarding_checklists;
 create policy "onboarding_checklists_manage_admin_only"
 on public.onboarding_checklists
 for all
-using (public.is_active_admin_user())
-with check (public.is_active_admin_user());
+using (private.is_active_admin_user())
+with check (private.is_active_admin_user());
 
 drop policy if exists "campaigns_admin_only" on public.campaigns;
 create policy "campaigns_admin_only"
 on public.campaigns
 for all
-using (public.is_active_admin_user())
-with check (public.is_active_admin_user());
+using (private.is_active_admin_user())
+with check (private.is_active_admin_user());
 
 drop policy if exists "email_templates_admin_only" on public.email_templates;
 create policy "email_templates_admin_only"
 on public.email_templates
 for all
-using (public.is_active_admin_user())
-with check (public.is_active_admin_user());
+using (private.is_active_admin_user())
+with check (private.is_active_admin_user());
 
 drop policy if exists "email_deliveries_select_related_or_admin" on public.email_deliveries;
 create policy "email_deliveries_select_related_or_admin"
 on public.email_deliveries
 for select
-using (profile_id = auth.uid() or public.is_active_admin_user());
+using (profile_id = auth.uid() or private.is_active_admin_user());
 
 drop policy if exists "email_deliveries_manage_admin_only" on public.email_deliveries;
 create policy "email_deliveries_manage_admin_only"
 on public.email_deliveries
 for all
-using (public.is_active_admin_user())
-with check (public.is_active_admin_user());
+using (private.is_active_admin_user())
+with check (private.is_active_admin_user());
 
 drop policy if exists "campaign_recipients_select_related_or_admin" on public.campaign_recipients;
 create policy "campaign_recipients_select_related_or_admin"
 on public.campaign_recipients
 for select
-using (profile_id = auth.uid() or public.is_active_admin_user());
+using (profile_id = auth.uid() or private.is_active_admin_user());
 
 drop policy if exists "campaign_recipients_manage_admin_only" on public.campaign_recipients;
 create policy "campaign_recipients_manage_admin_only"
 on public.campaign_recipients
 for all
-using (public.is_active_admin_user())
-with check (public.is_active_admin_user());
+using (private.is_active_admin_user())
+with check (private.is_active_admin_user());
 
 drop policy if exists "email_webhook_events_admin_only" on public.email_webhook_events;
 create policy "email_webhook_events_admin_only"
 on public.email_webhook_events
 for all
-using (public.is_active_admin_user())
-with check (public.is_active_admin_user());
+using (private.is_active_admin_user())
+with check (private.is_active_admin_user());
 
 drop policy if exists "email_suppressions_admin_only" on public.email_suppressions;
 create policy "email_suppressions_admin_only"
 on public.email_suppressions
 for all
-using (public.is_active_admin_user())
-with check (public.is_active_admin_user());
+using (private.is_active_admin_user())
+with check (private.is_active_admin_user());
 
 drop policy if exists "export_jobs_select_requester_or_admin" on public.export_jobs;
 create policy "export_jobs_select_requester_or_admin"
 on public.export_jobs
 for select
-using (requested_by = auth.uid() or public.is_active_admin_user());
+using (requested_by = auth.uid() or private.is_active_admin_user());
 
 drop policy if exists "export_jobs_manage_admin_only" on public.export_jobs;
 create policy "export_jobs_manage_admin_only"
 on public.export_jobs
 for all
-using (public.is_active_admin_user())
-with check (public.is_active_admin_user());
+using (private.is_active_admin_user())
+with check (private.is_active_admin_user());
 
 drop policy if exists "audit_logs_admin_only" on public.audit_logs;
 create policy "audit_logs_admin_only"
 on public.audit_logs
 for all
-using (public.is_active_admin_user())
-with check (public.is_active_admin_user());
+using (private.is_active_admin_user())
+with check (private.is_active_admin_user());
 
 create or replace view public.client_finance_summary
 with (security_invoker = true) as
@@ -943,6 +942,13 @@ create index if not exists idx_campaign_recipients_provider_message on public.ca
 create index if not exists idx_email_webhook_events_message on public.email_webhook_events(provider_message_id, created_at desc);
 create index if not exists idx_email_suppressions_active on public.email_suppressions(active, email_normalized);
 create index if not exists idx_audit_logs_entity on public.audit_logs(entity_type, created_at desc);
+
+-- Remove the old public helpers now that every policy points at private.*.
+drop function if exists public.is_active_admin_user();
+drop function if exists public.is_client_owner(uuid);
+drop function if exists public.is_operator_owner(uuid);
+drop function if exists public.is_assignment_client_owner(uuid);
+drop function if exists public.is_assignment_operator(uuid);
 
 -- Recommended RLS direction:
 -- 1. Keep public users restricted to their own client/operator records.

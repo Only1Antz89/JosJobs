@@ -46,14 +46,21 @@ const athenaRlsTables = [
   "audit_logs"
 ];
 
-const definerHelpers = [
-  { sql: schemaSql, signature: "public.log_application_status_change()" },
-  { sql: athenaAdminSql, signature: "public.is_active_admin_user()" },
-  { sql: athenaAdminSql, signature: "public.is_client_owner(uuid)" },
-  { sql: athenaAdminSql, signature: "public.is_operator_owner(uuid)" },
-  { sql: athenaAdminSql, signature: "public.is_assignment_client_owner(uuid)" },
-  { sql: athenaAdminSql, signature: "public.is_assignment_operator(uuid)" },
-  { sql: policiesSql, signature: "public.is_org_member(uuid)" }
+const triggerDefinerHelpers = [
+  { sql: schemaSql, signature: "public.log_application_status_change()" }
+];
+
+// RLS helpers must stay executable by the API roles, because Postgres evaluates policy
+// expressions as the querying role. They live in the unexposed "private" schema so
+// they cannot be called as RPCs.
+const rlsHelpers = [
+  { sql: athenaAdminSql, signature: "private.is_active_admin_user()" },
+  { sql: athenaAdminSql, signature: "private.is_client_owner(uuid)" },
+  { sql: athenaAdminSql, signature: "private.is_operator_owner(uuid)" },
+  { sql: athenaAdminSql, signature: "private.is_assignment_client_owner(uuid)" },
+  { sql: athenaAdminSql, signature: "private.is_assignment_operator(uuid)" },
+  { sql: policiesSql, signature: "private.is_org_member(uuid)" },
+  { sql: policiesSql, signature: "private.is_organiser()" }
 ];
 
 describe("supabase security hardening", () => {
@@ -80,7 +87,7 @@ describe("supabase security hardening", () => {
   });
 
   it("keeps the authenticated admin bootstrap path available", () => {
-    expect(athenaAdminSql).toContain("create or replace function public.is_active_admin_user()");
+    expect(athenaAdminSql).toContain("create or replace function private.is_active_admin_user()");
     expect(athenaAdminSql).toContain('create policy "admin_users_select_self"');
   });
 
@@ -90,12 +97,37 @@ describe("supabase security hardening", () => {
     expect(schemaSql).toMatch(/create or replace function public\.log_application_status_change\(\)\s+returns trigger\s+language plpgsql\s+security definer\s+set search_path = public/i);
   });
 
-  it("does not leave security definer helpers callable via exposed rpc roles", () => {
-    for (const helper of definerHelpers) {
+  it("does not leave trigger-only security definer helpers callable via exposed rpc roles", () => {
+    for (const helper of triggerDefinerHelpers) {
       expect(helper.sql).toContain(`revoke execute on function ${helper.signature} from public;`);
       expect(helper.sql).toContain(`revoke execute on function ${helper.signature} from anon;`);
       expect(helper.sql).toContain(`revoke execute on function ${helper.signature} from authenticated;`);
     }
+  });
+
+  it("keeps RLS helpers in the private schema and executable by the roles that run policies", () => {
+    for (const helper of rlsHelpers) {
+      expect(helper.sql).toContain(`create or replace function ${helper.signature.replace(/\(uuid\)$/, "(")}`);
+      expect(helper.sql).toContain(`revoke execute on function ${helper.signature} from public;`);
+      expect(helper.sql).toContain(
+        `grant execute on function ${helper.signature} to anon, authenticated, service_role;`
+      );
+    }
+
+    expect(policiesSql).toContain("grant usage on schema private to anon, authenticated, service_role;");
+    const policyLines = `${policiesSql}\n${athenaAdminSql}`
+      .split("\n")
+      .filter((line) => !line.startsWith("drop function if exists"));
+    for (const line of policyLines) {
+      expect(line).not.toMatch(
+        /\bpublic\.is_(org_member|active_admin_user|client_owner|operator_owner|assignment_client_owner|assignment_operator)\(/
+      );
+    }
+  });
+
+  it("does not expose field-team contact details to anonymous visitors", () => {
+    expect(policiesSql).not.toContain("using (id = auth.uid() or role = 'staff');");
+    expect(policiesSql).toContain("using (id = auth.uid() or (role = 'staff' and private.is_organiser()));");
   });
 
   it("does not use an always-true organization insert policy", () => {

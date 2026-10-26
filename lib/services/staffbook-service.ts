@@ -2,7 +2,73 @@ import { createServiceRoleClient } from "@/lib/data/supabase-client";
 import { buildBaseDemoDatabase } from "@/lib/data/demo-seed";
 import { buildRankedStaff } from "@/lib/domain/ranking";
 import { env, getRuntimeMode } from "@/lib/env";
-import type { EnrichedJob, LandingHighlights, RankedStaffRow } from "@/types/domain";
+import type { EnrichedJob, LandingHighlights, Profile, RankedStaffRow, Rating } from "@/types/domain";
+
+// Public pages are rendered on the server with the service-role client, and anything
+// returned here is sent to the browser. Never include contact details.
+function mapPublicStaffProfile(row: Record<string, unknown>): Profile {
+  return {
+    id: String(row.id),
+    role: "staff",
+    fullName: String(row.full_name),
+    email: "",
+    bio: row.bio ? String(row.bio) : undefined,
+    skills: Array.isArray(row.skills) ? row.skills.map(String) : [],
+    availability: row.availability ? String(row.availability) : undefined,
+    avatarUrl: row.avatar_url ? String(row.avatar_url) : undefined,
+    location: row.location ? String(row.location) : undefined,
+    languages: Array.isArray(row.languages) ? row.languages.map(String) : undefined,
+    preferredRoles: Array.isArray(row.preferred_roles) ? row.preferred_roles.map(String) : undefined,
+    age: row.age ? Number(row.age) : undefined,
+    createdAt: String(row.created_at),
+    updatedAt: row.updated_at ? String(row.updated_at) : undefined
+  };
+}
+
+function mapPublicRating(row: Record<string, unknown>): Rating {
+  return {
+    id: String(row.id),
+    eventId: String(row.event_id),
+    jobId: String(row.job_id ?? ""),
+    organizationId: String(row.organization_id),
+    staffId: String(row.staff_id),
+    organiserId: String(row.organiser_id),
+    reliabilityScore: Number(row.reliability_score ?? row.rating ?? 0),
+    professionalismScore: Number(row.professionalism_score ?? row.rating ?? 0),
+    communicationScore: Number(row.communication_score ?? row.rating ?? 0),
+    customerServiceScore: Number(row.customer_service_score ?? row.rating ?? 0),
+    pressureHandlingScore: Number(row.pressure_handling_score ?? row.rating ?? 0),
+    overallScore: Number(row.overall_score ?? row.rating ?? 0),
+    rating: Number(row.overall_score ?? row.rating ?? 0),
+    comment: String(row.comment ?? ""),
+    createdAt: String(row.created_at)
+  };
+}
+
+function reportPublicQueryFailure(scope: string, error: unknown) {
+  console.error(`[athena] public ${scope} query failed`, error);
+}
+
+const EMPTY_HIGHLIGHTS: LandingHighlights = {
+  featuredJobs: [],
+  topStaff: [],
+  stats: { activeJobs: 0, organisers: 0, staff: 0, placements: 0 }
+};
+
+// Sample data is only for environments without Supabase. A live site must never show
+// sample jobs or people, so live failures return empty results and log instead.
+function shouldUseDemoData() {
+  return getRuntimeMode() === "demo";
+}
+
+function getLiveServiceClient(scope: string) {
+  if (!env.supabaseServiceRoleKey) {
+    reportPublicQueryFailure(scope, new Error("SUPABASE_SERVICE_ROLE_KEY is not set."));
+    return null;
+  }
+
+  return createServiceRoleClient();
+}
 
 function buildPublicDemoJobs(): EnrichedJob[] {
   const database = buildBaseDemoDatabase();
@@ -92,12 +158,25 @@ function mapPublicJob(row: Record<string, unknown>): EnrichedJob {
 }
 
 export async function getPublicHighlights(): Promise<LandingHighlights> {
-  if (getRuntimeMode() === "demo" || !env.supabaseServiceRoleKey) {
+  if (shouldUseDemoData()) {
     return buildPublicDemoHighlights();
   }
 
-  const client = createServiceRoleClient();
-  const [jobsResult, profilesResult, ratingsResult, organiserCountResult, staffCountResult, placementsResult] = await Promise.all([
+  const client = getLiveServiceClient("highlights");
+
+  if (!client) {
+    return EMPTY_HIGHLIGHTS;
+  }
+
+  const [
+    jobsResult,
+    profilesResult,
+    ratingsResult,
+    organiserCountResult,
+    staffCountResult,
+    placementsResult,
+    openJobsCountResult
+  ] = await Promise.all([
     client
       .from("jobs")
       .select("*, events(*), organizations(*), applications(id)")
@@ -110,7 +189,8 @@ export async function getPublicHighlights(): Promise<LandingHighlights> {
     client
       .from("applications")
       .select("id", { count: "exact", head: true })
-      .eq("status", "accepted")
+      .eq("status", "accepted"),
+    client.from("jobs").select("id", { count: "exact", head: true }).eq("status", "open")
   ]);
 
   if (
@@ -119,51 +199,30 @@ export async function getPublicHighlights(): Promise<LandingHighlights> {
     ratingsResult.error ||
     organiserCountResult.error ||
     staffCountResult.error ||
-    placementsResult.error
+    placementsResult.error ||
+    openJobsCountResult.error
   ) {
-    return buildPublicDemoHighlights();
+    reportPublicQueryFailure(
+      "highlights",
+      jobsResult.error ??
+        profilesResult.error ??
+        ratingsResult.error ??
+        organiserCountResult.error ??
+        staffCountResult.error ??
+        placementsResult.error ??
+        openJobsCountResult.error
+    );
+    return EMPTY_HIGHLIGHTS;
   }
 
   return {
     featuredJobs: (jobsResult.data ?? []).map((row) => mapPublicJob(row)),
     topStaff: buildRankedStaff(
-      (profilesResult.data ?? []).map((row) => ({
-        id: String(row.id),
-        role: "staff" as const,
-        fullName: String(row.full_name),
-        email: String(row.email ?? ""),
-        phone: row.phone ? String(row.phone) : undefined,
-        bio: row.bio ? String(row.bio) : undefined,
-        skills: Array.isArray(row.skills) ? row.skills.map(String) : [],
-        availability: row.availability ? String(row.availability) : undefined,
-        avatarUrl: row.avatar_url ? String(row.avatar_url) : undefined,
-        location: row.location ? String(row.location) : undefined,
-        languages: Array.isArray(row.languages) ? row.languages.map(String) : undefined,
-        preferredRoles: Array.isArray(row.preferred_roles) ? row.preferred_roles.map(String) : undefined,
-        age: row.age ? Number(row.age) : undefined,
-        createdAt: String(row.created_at),
-        updatedAt: row.updated_at ? String(row.updated_at) : undefined
-      })),
-      (ratingsResult.data ?? []).map((row) => ({
-        id: String(row.id),
-        eventId: String(row.event_id),
-        jobId: String(row.job_id ?? ""),
-        organizationId: String(row.organization_id),
-        staffId: String(row.staff_id),
-        organiserId: String(row.organiser_id),
-        reliabilityScore: Number(row.reliability_score ?? row.rating ?? 0),
-        professionalismScore: Number(row.professionalism_score ?? row.rating ?? 0),
-        communicationScore: Number(row.communication_score ?? row.rating ?? 0),
-        customerServiceScore: Number(row.customer_service_score ?? row.rating ?? 0),
-        pressureHandlingScore: Number(row.pressure_handling_score ?? row.rating ?? 0),
-        overallScore: Number(row.overall_score ?? row.rating ?? 0),
-        rating: Number(row.overall_score ?? row.rating ?? 0),
-        comment: String(row.comment ?? ""),
-        createdAt: String(row.created_at)
-      }))
+      (profilesResult.data ?? []).map((row) => mapPublicStaffProfile(row)),
+      (ratingsResult.data ?? []).map((row) => mapPublicRating(row))
     ).slice(0, 4),
     stats: {
-      activeJobs: jobsResult.data?.length ?? 0,
+      activeJobs: openJobsCountResult.count ?? 0,
       organisers: organiserCountResult.count ?? 0,
       staff: staffCountResult.count ?? 0,
       placements: placementsResult.count ?? 0
@@ -172,25 +231,31 @@ export async function getPublicHighlights(): Promise<LandingHighlights> {
 }
 
 export async function getPublicJobs() {
-  if (getRuntimeMode() === "demo" || !env.supabaseServiceRoleKey) {
+  if (shouldUseDemoData()) {
     return buildPublicDemoJobs();
   }
 
-  const client = createServiceRoleClient();
+  const client = getLiveServiceClient("jobs");
+
+  if (!client) {
+    return [];
+  }
+
   const jobsResult = await client
     .from("jobs")
     .select("*, events(*), organizations(*), applications(id)")
     .eq("status", "open");
 
   if (jobsResult.error) {
-    return buildPublicDemoJobs();
+    reportPublicQueryFailure("jobs", jobsResult.error);
+    return [];
   }
 
   return (jobsResult.data ?? []).map((row) => mapPublicJob(row));
 }
 
 export async function getPublicRankedStaff(): Promise<RankedStaffRow[]> {
-  if (getRuntimeMode() === "demo" || !env.supabaseServiceRoleKey) {
+  if (shouldUseDemoData()) {
     const database = buildBaseDemoDatabase();
     return buildRankedStaff(
       database.profiles.filter((profile) => profile.role === "staff"),
@@ -198,50 +263,24 @@ export async function getPublicRankedStaff(): Promise<RankedStaffRow[]> {
     );
   }
 
-  const client = createServiceRoleClient();
+  const client = getLiveServiceClient("staff");
+
+  if (!client) {
+    return [];
+  }
+
   const [profilesResult, ratingsResult] = await Promise.all([
     client.from("profiles").select("*").eq("role", "staff"),
     client.from("ratings").select("*")
   ]);
 
   if (profilesResult.error || ratingsResult.error) {
-    return getPublicHighlights().then((payload) => payload.topStaff);
+    reportPublicQueryFailure("staff", profilesResult.error ?? ratingsResult.error);
+    return [];
   }
 
   return buildRankedStaff(
-    (profilesResult.data ?? []).map((row) => ({
-      id: String(row.id),
-      role: "staff" as const,
-      fullName: String(row.full_name),
-      email: String(row.email ?? ""),
-      phone: row.phone ? String(row.phone) : undefined,
-      bio: row.bio ? String(row.bio) : undefined,
-      skills: Array.isArray(row.skills) ? row.skills.map(String) : [],
-      availability: row.availability ? String(row.availability) : undefined,
-      avatarUrl: row.avatar_url ? String(row.avatar_url) : undefined,
-      location: row.location ? String(row.location) : undefined,
-      languages: Array.isArray(row.languages) ? row.languages.map(String) : undefined,
-      preferredRoles: Array.isArray(row.preferred_roles) ? row.preferred_roles.map(String) : undefined,
-      age: row.age ? Number(row.age) : undefined,
-      createdAt: String(row.created_at),
-      updatedAt: row.updated_at ? String(row.updated_at) : undefined
-    })),
-    (ratingsResult.data ?? []).map((row) => ({
-      id: String(row.id),
-      eventId: String(row.event_id),
-      jobId: String(row.job_id ?? ""),
-      organizationId: String(row.organization_id),
-      staffId: String(row.staff_id),
-      organiserId: String(row.organiser_id),
-      reliabilityScore: Number(row.reliability_score ?? row.rating ?? 0),
-      professionalismScore: Number(row.professionalism_score ?? row.rating ?? 0),
-      communicationScore: Number(row.communication_score ?? row.rating ?? 0),
-      customerServiceScore: Number(row.customer_service_score ?? row.rating ?? 0),
-      pressureHandlingScore: Number(row.pressure_handling_score ?? row.rating ?? 0),
-      overallScore: Number(row.overall_score ?? row.rating ?? 0),
-      rating: Number(row.overall_score ?? row.rating ?? 0),
-      comment: String(row.comment ?? ""),
-      createdAt: String(row.created_at)
-    }))
+    (profilesResult.data ?? []).map((row) => mapPublicStaffProfile(row)),
+    (ratingsResult.data ?? []).map((row) => mapPublicRating(row))
   );
 }
