@@ -1,6 +1,9 @@
+import type { Metadata } from "next";
 import { AuditTimeline } from "@/components/admin/audit-timeline";
 import { DetailHeader } from "@/components/admin/detail-header";
 import { getAdminAuditLog } from "@/lib/queries/audit-log";
+
+export const metadata: Metadata = { title: "Audit log" };
 
 export default async function AuditLogPage() {
   const entries = await getAdminAuditLog();

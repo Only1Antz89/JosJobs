@@ -1,6 +1,6 @@
 import { Card } from "@/components/ui/card";
 
-export function LoadingPanel({ label = "Loading..." }: { label?: string }) {
+export function LoadingPanel({ label = "Loading your workspace" }: { label?: string }) {
   return (
     <Card className="animate-pulse">
       <div className="h-4 w-28 rounded-full bg-white/10" />

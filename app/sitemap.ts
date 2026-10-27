@@ -1,13 +1,13 @@
 import type { MetadataRoute } from "next";
-import { SITE_CONTACT } from "@/lib/site-content";
+import { getSiteUrl } from "@/lib/seo";
 import { getPublicJobs } from "@/lib/services/staffbook-service";
 
 export const revalidate = 3600;
 
-const STATIC_PATHS = ["/", "/services", "/about", "/contact", "/jobs", "/staff", "/privacy", "/terms"];
+const STATIC_PATHS = ["/", "/services", "/about", "/contact", "/jobs", "/staff", "/auth/signup", "/auth/login", "/privacy", "/terms"];
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const base = SITE_CONTACT.websiteUrl;
+  const base = getSiteUrl();
   const jobs = await getPublicJobs();
 
   return [

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { headers } from "next/headers";
@@ -10,6 +11,8 @@ import { Button } from "@/components/ui/button";
 import { getRuntimeMode } from "@/lib/env";
 import { getFinanceSettings, getInvoiceById } from "@/lib/services/admin-finance";
 import { formatDate, formatMoney } from "@/lib/utils";
+
+export const metadata: Metadata = { title: "Invoice" };
 
 const METHOD_LABELS: Record<string, string> = {
   bank_transfer: "Bank transfer",

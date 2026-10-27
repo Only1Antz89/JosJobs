@@ -2,11 +2,14 @@ import type { Metadata } from "next";
 import { MarketingPageShell } from "@/components/layout/marketing-page-shell";
 import { Card } from "@/components/ui/card";
 import { PRIVACY_CONTENT } from "@/lib/site-content";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Privacy Policy",
-  description: "How Athena Pro collects, uses, stores, and protects personal data."
-};
+  description:
+    "How Athena Pro collects, uses, stores, and protects personal data.",
+  path: "/privacy"
+});
 
 export default function PrivacyPage() {
   return (

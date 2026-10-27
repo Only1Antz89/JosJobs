@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { DetailHeader } from "@/components/admin/detail-header";
 import { InsightCard } from "@/components/admin/insight-card";
@@ -9,6 +10,8 @@ import { Button } from "@/components/ui/button";
 import { getRuntimeMode } from "@/lib/env";
 import { getAdminDataset } from "@/lib/queries/admin-dataset";
 import { formatCurrency } from "@/lib/utils";
+
+export const metadata: Metadata = { title: "Overview" };
 
 export default async function AdminDashboardPage() {
   const data = await getAdminDataset();

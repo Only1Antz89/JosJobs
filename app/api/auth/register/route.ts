@@ -66,19 +66,24 @@ function buildStaffAvailabilityRules(userId: string, input: z.infer<typeof staff
 }
 
 function registrationErrorResponse(error: unknown) {
-  if (error instanceof AppError) {
+  if (error instanceof z.ZodError) {
+    return NextResponse.json({ ok: false, error: error.issues[0]?.message ?? "Please check the form and try again." }, { status: 400 });
+  }
+
+  // Problems the person can fix (for example an email already in use) are shown as written.
+  if (error instanceof AppError && error.status < 500) {
     return NextResponse.json({ ok: false, error: error.message }, { status: error.status });
   }
 
-  if (error instanceof z.ZodError) {
-    return NextResponse.json({ ok: false, error: error.issues[0]?.message ?? "Invalid registration payload." }, { status: 400 });
-  }
-
-  if (error instanceof Error) {
-    return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
-  }
-
-  return NextResponse.json({ ok: false, error: "Unable to create account." }, { status: 500 });
+  // Anything else is a server or database problem: log the detail, show a plain message.
+  console.error("[athena] registration failed", error);
+  return NextResponse.json(
+    {
+      ok: false,
+      error: "We couldn't create your account just now. Please try again in a few minutes, or contact us if it keeps happening."
+    },
+    { status: 500 }
+  );
 }
 
 export async function POST(request: Request) {

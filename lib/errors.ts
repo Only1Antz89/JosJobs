@@ -34,6 +34,10 @@ export function toDisplayError(error: unknown) {
       .join("\n");
   }
 
+  if (error instanceof Error && /failed to fetch|networkerror|load failed|network request failed/i.test(error.message)) {
+    return "We couldn't reach Athena Pro. Check your internet connection and try again.";
+  }
+
   if (error instanceof Error && error.message.trim().length > 0) {
     return error.message;
   }

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { AdminDataTable } from "@/components/admin/data-table";
 import { DetailHeader } from "@/components/admin/detail-header";
@@ -6,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { getAdminCampaigns } from "@/lib/queries/campaigns";
 import { formatDateTime } from "@/lib/utils";
 import { EMAIL_TEMPLATE_LABELS } from "@/types/admin";
+
+export const metadata: Metadata = { title: "Campaigns" };
 
 export const dynamic = "force-dynamic";
 

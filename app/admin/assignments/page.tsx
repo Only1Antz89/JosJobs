@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { AdminDataTable } from "@/components/admin/data-table";
 import { DetailHeader } from "@/components/admin/detail-header";
@@ -6,6 +7,8 @@ import { FilterToolbar } from "@/components/admin/filters-bar";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { getAdminAssignments } from "@/lib/queries/assignments";
 import { formatCurrency, formatDateTime } from "@/lib/utils";
+
+export const metadata: Metadata = { title: "Assignments" };
 
 export default async function AssignmentsPage() {
   const assignments = await getAdminAssignments();

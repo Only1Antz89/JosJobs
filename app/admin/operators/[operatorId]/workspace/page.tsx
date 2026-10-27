@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { DetailHeader } from "@/components/admin/detail-header";
@@ -8,6 +9,8 @@ import { Card } from "@/components/ui/card";
 import { StatCard } from "@/components/ui/stat-card";
 import { getAdminOperatorById } from "@/lib/queries/operators";
 import { formatCurrency, formatDateTime } from "@/lib/utils";
+
+export const metadata: Metadata = { title: "Operator workspace" };
 
 const ACTIVE_ASSIGNMENT_STATUSES = new Set(["open", "partially_filled", "filled", "in_progress"]);
 

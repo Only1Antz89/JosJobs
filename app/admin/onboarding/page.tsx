@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { AdminDataTable } from "@/components/admin/data-table";
 import { DetailHeader } from "@/components/admin/detail-header";
 import { OnboardingActions } from "@/components/admin/onboarding-actions";
@@ -5,6 +6,8 @@ import { StatusBadge } from "@/components/admin/status-badge";
 import { getRuntimeMode } from "@/lib/env";
 import { getAdminOnboarding } from "@/lib/queries/onboarding";
 import { formatDateTime } from "@/lib/utils";
+
+export const metadata: Metadata = { title: "Onboarding" };
 
 export default async function OnboardingPage() {
   const onboarding = await getAdminOnboarding();

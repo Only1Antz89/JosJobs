@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { AuditTimeline } from "@/components/admin/audit-timeline";
 import { ChargeRateForm } from "@/components/admin/charge-rate-form";
@@ -8,6 +9,8 @@ import { TabbedDetailLayout } from "@/components/admin/tabbed-detail-layout";
 import { getRuntimeMode } from "@/lib/env";
 import { getAdminAssignmentById } from "@/lib/queries/assignments";
 import { formatCurrency, formatDateTime } from "@/lib/utils";
+
+export const metadata: Metadata = { title: "Assignment" };
 
 export default async function AssignmentDetailPage({
   params

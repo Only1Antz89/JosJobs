@@ -7,11 +7,14 @@ import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
 import { Button } from "@/components/ui/button";
 import { ABOUT_CONTENT, SITE_CONTACT } from "@/lib/site-content";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "About",
-  description: "Learn how Athena Pro combines strategic thinking, technical precision, and event operations."
-};
+  description:
+    "Learn how Athena Pro combines strategic thinking, technical precision, and event operations.",
+  path: "/about"
+});
 
 const ABOUT_IMAGES = [
   "https://images.unsplash.com/photo-1521737711867-e3b97375f902?auto=format&fit=crop&w=1600&q=80",

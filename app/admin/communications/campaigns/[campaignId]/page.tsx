@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { CampaignComposer } from "@/components/admin/campaign-composer";
 import { AdminDataTable } from "@/components/admin/data-table";
@@ -6,6 +7,8 @@ import { StatusBadge } from "@/components/admin/status-badge";
 import { getAdminCampaignById, getAdminEmailDeliveries, getAdminEmailTemplates } from "@/lib/queries/campaigns";
 import { formatDateTime } from "@/lib/utils";
 import { EMAIL_TEMPLATE_LABELS } from "@/types/admin";
+
+export const metadata: Metadata = { title: "Campaign" };
 
 export const dynamic = "force-dynamic";
 

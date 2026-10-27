@@ -1,7 +1,10 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { DetailHeader } from "@/components/admin/detail-header";
 import { InsightCard } from "@/components/admin/insight-card";
 import { Button } from "@/components/ui/button";
+
+export const metadata: Metadata = { title: "Communications" };
 
 export default function CommunicationsPage() {
   return (

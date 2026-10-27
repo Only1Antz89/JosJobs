@@ -40,7 +40,11 @@ export async function POST(
     .select("id");
 
   if (error) {
-    return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
+    console.error("[athena] application status update failed", error);
+    return NextResponse.json(
+      { ok: false, error: "We couldn't update this application. Refresh the page and try again." },
+      { status: 500 }
+    );
   }
 
   // Row-level security silently skips rows this client does not own, so an empty

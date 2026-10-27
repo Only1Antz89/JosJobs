@@ -3,11 +3,14 @@ import { MarketingPageShell } from "@/components/layout/marketing-page-shell";
 import { Card } from "@/components/ui/card";
 import { ContactForm } from "@/features/public/contact-form";
 import { SITE_CONTACT } from "@/lib/site-content";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Contact",
-  description: "Start an Athena Pro enquiry for ticketing support, event staffing, or commercial management."
-};
+  description:
+    "Start an Athena Pro enquiry for ticketing support, event staffing, or commercial management.",
+  path: "/contact"
+});
 
 export default function ContactPage() {
   return (
