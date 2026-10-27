@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { AdminDataTable } from "@/components/admin/data-table";
 import { DetailHeader } from "@/components/admin/detail-header";
@@ -10,6 +11,8 @@ import { getRuntimeMode } from "@/lib/env";
 import { getAdminFinance } from "@/lib/queries/finance";
 import { loadFinanceWorkspace } from "@/lib/services/admin-finance";
 import { formatCurrency, formatDate, formatMoney } from "@/lib/utils";
+
+export const metadata: Metadata = { title: "Finance" };
 
 export default async function FinancePage() {
   if (getRuntimeMode() !== "live") {

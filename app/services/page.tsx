@@ -7,11 +7,14 @@ import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
 import { Button } from "@/components/ui/button";
 import { SERVICE_PILLARS } from "@/lib/site-content";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Services",
-  description: "Athena Pro services across ticketing technology, onsite personnel, and commercial event management."
-};
+  description:
+    "Athena Pro services across ticketing technology, onsite personnel, and commercial event management.",
+  path: "/services"
+});
 
 const SERVICE_IMAGES = [
   "https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&w=1600&q=80",

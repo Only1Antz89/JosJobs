@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { AdminDataTable } from "@/components/admin/data-table";
 import { DetailHeader } from "@/components/admin/detail-header";
 import { ExportButton } from "@/components/admin/export-button";
@@ -9,6 +10,8 @@ import { getAdminExportJobs } from "@/lib/queries/reports";
 import { EXPORT_TYPES, type ExportType } from "@/lib/services/admin-exports";
 import { loadFinanceWorkspace, type FinanceWorkspace } from "@/lib/services/admin-finance";
 import { formatDateTime, formatMoney } from "@/lib/utils";
+
+export const metadata: Metadata = { title: "Reports" };
 
 function monthKey(value: string | null | undefined) {
   return value ? value.slice(0, 7) : "";

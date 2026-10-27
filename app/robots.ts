@@ -1,13 +1,13 @@
 import type { MetadataRoute } from "next";
-import { SITE_CONTACT } from "@/lib/site-content";
+import { getSiteUrl } from "@/lib/seo";
 
 export default function robots(): MetadataRoute.Robots {
   return {
     rules: {
       userAgent: "*",
       allow: "/",
-      disallow: ["/admin", "/admin-login", "/dashboard", "/events", "/api", "/auth", "/unsubscribe", "/invoices"]
+      disallow: ["/admin", "/admin-login", "/dashboard", "/events", "/api", "/auth/forgot-password", "/auth/reset-password", "/unsubscribe", "/invoices"]
     },
-    sitemap: `${SITE_CONTACT.websiteUrl}/sitemap.xml`
+    sitemap: `${getSiteUrl()}/sitemap.xml`
   };
 }

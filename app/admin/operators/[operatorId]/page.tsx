@@ -1,9 +1,12 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { DetailHeader } from "@/components/admin/detail-header";
 import { OperatorDetailInsights } from "@/components/admin/operator-detail-insights";
 import { Button } from "@/components/ui/button";
 import { getAdminOperatorById } from "@/lib/queries/operators";
+
+export const metadata: Metadata = { title: "Operator" };
 
 export default async function OperatorDetailPage({
   params

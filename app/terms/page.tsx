@@ -2,11 +2,14 @@ import type { Metadata } from "next";
 import { MarketingPageShell } from "@/components/layout/marketing-page-shell";
 import { Card } from "@/components/ui/card";
 import { TERMS_CONTENT } from "@/lib/site-content";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Terms and Conditions",
-  description: "The core terms governing use of the Athena Pro website and services."
-};
+  description:
+    "The core terms governing use of the Athena Pro website and services.",
+  path: "/terms"
+});
 
 export default function TermsPage() {
   return (

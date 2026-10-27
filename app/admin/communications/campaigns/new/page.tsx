@@ -1,6 +1,9 @@
+import type { Metadata } from "next";
 import { CampaignComposer } from "@/components/admin/campaign-composer";
 import { DetailHeader } from "@/components/admin/detail-header";
 import { getAdminEmailDeliveries, getAdminEmailTemplates } from "@/lib/queries/campaigns";
+
+export const metadata: Metadata = { title: "New campaign" };
 
 export const dynamic = "force-dynamic";
 

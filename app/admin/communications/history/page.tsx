@@ -1,9 +1,12 @@
+import type { Metadata } from "next";
 import { AdminDataTable } from "@/components/admin/data-table";
 import { DetailHeader } from "@/components/admin/detail-header";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { getAdminEmailDeliveries } from "@/lib/queries/campaigns";
 import { formatDateTime } from "@/lib/utils";
 import { EMAIL_TEMPLATE_LABELS } from "@/types/admin";
+
+export const metadata: Metadata = { title: "Email history" };
 
 export const dynamic = "force-dynamic";
 

@@ -5,20 +5,7 @@ import { Toaster } from "sonner";
 import "@/app/globals.css";
 import { DeployRefresh } from "@/components/layout/deploy-refresh";
 import { BRAND } from "@/lib/brand";
-import { SITE_CONTACT } from "@/lib/site-content";
-
-function getMetadataBase() {
-  const deploymentUrl =
-    process.env.NEXT_PUBLIC_SITE_URL ??
-    process.env.NEXT_PUBLIC_APP_URL ??
-    process.env.VERCEL_PROJECT_PRODUCTION_URL ??
-    process.env.VERCEL_URL ??
-    SITE_CONTACT.websiteUrl;
-
-  return new URL(
-    deploymentUrl.startsWith("http") ? deploymentUrl : `https://${deploymentUrl}`
-  );
-}
+import { getSiteUrl } from "@/lib/seo";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -33,34 +20,24 @@ const montserrat = Montserrat({
 });
 
 export const metadata: Metadata = {
-  metadataBase: getMetadataBase(),
+  metadataBase: new URL(getSiteUrl()),
   title: {
-    default: BRAND.name,
-    template: `%s | ${BRAND.name}`
+    default: `${BRAND.plainName} | Event ticketing, staffing and operations`,
+    template: `%s | ${BRAND.plainName}`
   },
   description: BRAND.metadataDescription,
-  icons: {
-    icon: [{ url: "/icon.png", type: "image/png" }],
-    shortcut: [{ url: "/icon.png", type: "image/png" }],
-    apple: [{ url: "/icon.png", type: "image/png" }]
-  },
+  applicationName: BRAND.plainName,
   openGraph: {
+    type: "website",
+    siteName: BRAND.plainName,
+    locale: "en_GB",
     title: BRAND.plainName,
-    description: BRAND.metadataDescription,
-    images: [
-      {
-        url: "/opengraph-image.jpeg",
-        width: 800,
-        height: 800,
-        alt: `${BRAND.plainName} preview`
-      }
-    ]
+    description: BRAND.metadataDescription
   },
   twitter: {
     card: "summary_large_image",
     title: BRAND.plainName,
-    description: BRAND.metadataDescription,
-    images: ["/twitter-image.jpeg"]
+    description: BRAND.metadataDescription
   }
 };
 

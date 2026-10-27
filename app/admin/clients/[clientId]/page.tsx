@@ -1,9 +1,12 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ClientDetailInsights } from "@/components/admin/client-detail-insights";
 import { DetailHeader } from "@/components/admin/detail-header";
 import { Button } from "@/components/ui/button";
 import { getAdminClientById } from "@/lib/queries/clients";
+
+export const metadata: Metadata = { title: "Client" };
 
 export default async function ClientDetailPage({
   params

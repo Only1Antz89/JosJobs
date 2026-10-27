@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { SiteHeader } from "@/components/layout/site-header";
 import { Button } from "@/components/ui/button";
@@ -5,6 +6,15 @@ import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { getRuntimeMode } from "@/lib/env";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
+import { pageMetadata } from "@/lib/seo";
+
+export const metadata: Metadata = pageMetadata({
+  title: "Email preferences",
+  description:
+    "Choose which Athena Pro emails you receive.",
+  path: "/unsubscribe",
+  noIndex: true
+});
 
 async function getPreference(token: string) {
   if (!token || getRuntimeMode() !== "live") {

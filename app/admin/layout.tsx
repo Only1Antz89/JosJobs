@@ -1,9 +1,18 @@
+import type { Metadata } from "next";
 import { AdminHeader } from "@/components/admin/header";
 import { AdminSidebar } from "@/components/admin/sidebar";
 import { requireAdmin } from "@/lib/auth/require-admin";
 
 // Admin pages show private, changing data: always render per request, never cache.
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: {
+    default: "Admin",
+    template: "%s | Athena Pro Admin"
+  },
+  robots: { index: false, follow: false }
+};
 
 export default async function AdminLayout({
   children

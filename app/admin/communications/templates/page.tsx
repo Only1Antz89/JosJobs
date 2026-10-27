@@ -1,7 +1,10 @@
+import type { Metadata } from "next";
 import { AdminDataTable } from "@/components/admin/data-table";
 import { DetailHeader } from "@/components/admin/detail-header";
 import { getAdminEmailTemplates } from "@/lib/queries/campaigns";
 import { EMAIL_TEMPLATE_LABELS } from "@/types/admin";
+
+export const metadata: Metadata = { title: "Email templates" };
 
 export const dynamic = "force-dynamic";
 

@@ -46,6 +46,7 @@ When Supabase env vars are present, the app uses Supabase Auth and table CRUD th
 Create `.env.local`:
 
 ```bash
+NEXT_PUBLIC_SITE_URL=https://www.athenapro.co.uk
 NEXT_PUBLIC_SUPABASE_URL=your-supabase-url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
@@ -81,6 +82,7 @@ Notes for a live deploy:
 - `SUPABASE_SERVICE_ROLE_KEY` is required. The public home, jobs and field-team pages read through it, and they show empty lists (with an error in the logs) if it is missing.
 - `SMTP2GO_WEBHOOK_AUTH` is required for the SMTP2GO webhook. Without it the webhook is refused in live mode.
 - `ATHENA_ENQUIRIES_EMAIL` receives contact-form enquiries. It falls back to the public support address.
+- `NEXT_PUBLIC_SITE_URL` is the public domain used for canonical links, the sitemap and share previews. It defaults to https://www.athenapro.co.uk.
 - An invalid value in any one variable is ignored and logged, rather than switching the whole site to demo mode.
 - Invoices show the `ATHENA_BANK_*` details for bank transfer. The admin portal won't send invoices until bank details or Stripe keys are set.
 - Card payments need both Stripe keys. In the Stripe dashboard, add a webhook endpoint at `https://your-domain.com/api/stripe/webhook` for the events `checkout.session.completed` and `checkout.session.async_payment_succeeded`, and copy its signing secret into `STRIPE_WEBHOOK_SECRET`. Paid invoices are then marked paid automatically.
